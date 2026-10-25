@@ -12,7 +12,7 @@ The official shield disk images are based on old 32-bit Raspberry Pi OS releases
 
 The four scripts in this repository handle all of this. Everything is built from source or comes from Debian; no 32-bit packages are used.
 
-> Status: tested on one shieldXL + Pi 4 (October 2026). Screen, keys, encoders, audio in and out, SuperCollider engines, softcut and maiden all work; checked with awake and smplr, and after a cold start. The scripts were refined while installing that one device, so a completely fresh run may still hit something. Please report back if it does.
+> Status: tested on a shieldXL + Pi 4 (October 2026), including a clean install on a freshly flashed card following this README step by step (about 10 minutes from first boot to a running norns). Screen, keys, encoders, audio in and out, SuperCollider engines, softcut and maiden all work, also after a cold start. It has only been tried on this one device so far; please report back if something goes wrong on yours.
 
 ---
 
