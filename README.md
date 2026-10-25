@@ -201,6 +201,7 @@ Installs **awake** (`tehn/awake`, the script a new norns starts with) and **firs
 | meters move, but no sound | output muted: `amixer -c sndrpimonome contents` shows `Master Playback Switch` off → `amixer -c sndrpimonome set Master 100% on && sudo alsactl store` |
 | norns-jack fails | `journalctl -u norns-jack` — `jack_wait` missing → `sudo apt install jack-example-tools` |
 | SUPERCOLLIDER FAIL | `journalctl -u norns-sclang`; restart the services once: `sudo systemctl restart norns-jack norns-crone norns-sclang norns-matron` (restarting `norns.target` alone doesn't restart them) |
+| crone / sclang / matron fail to restart with "jack server is not running", but `norns-jack` is active | JACK's socket in `/dev/shm` was deleted by logind after an SSH logout. Check `/etc/systemd/logind.conf.d/10-norns.conf` contains `RemoveIPC=no`, then `sudo systemctl restart norns-jack norns-crone norns-sclang norns-matron` |
 | black screen | `ls /dev/spidev0.0`; no screen overlay in `config.txt`; `spidev.bufsiz=8192` in `cmdline.txt`; `pinctrl get 5,6` should show outputs while matron runs |
 | `setlocale: LC_ALL: cannot change locale (en_US.UTF-8)` on every SSH login | harmless: your computer's SSH client sends its locale and the Pi doesn't have it. Generate it: `sudo sed -i 's/^# *en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen && sudo locale-gen` |
 | keys / encoders dead | `ls /dev/input/by-path/` must list `platform-keys-event` and `platform-soc:knob1-event` … `knob3-event`; `sudo evtest` to see events |

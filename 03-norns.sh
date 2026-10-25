@@ -210,6 +210,14 @@ sudo tee /etc/security/limits.d/99-realtime.conf > /dev/null <<EOF
 @audio - rtprio 95
 @audio - memlock unlimited
 EOF
+# logind deletes a user's /dev/shm files when their last login session ends
+# (RemoveIPC=yes): after an ssh logout that takes JACK's socket away, and
+# restarting crone, sclang or matron then fails with "jack server is not running"
+sudo mkdir -p /etc/systemd/logind.conf.d
+sudo tee /etc/systemd/logind.conf.d/10-norns.conf > /dev/null <<EOF
+[Login]
+RemoveIPC=no
+EOF
 sudo systemctl daemon-reload
 sudo systemctl enable norns.target norns-jack norns-crone norns-sclang norns-matron norns-maiden.socket norns-maiden norns-init
 
