@@ -174,6 +174,7 @@ Then the script:
   - sclang runs with `QT_QPA_PLATFORM=offscreen` (Debian's sclang is built with Qt).
   - `norns-init` sets the CPU governor to performance.
   - `@audio` realtime limits are set.
+- Sets `RemoveIPC=no` for systemd-logind. By default logind deletes a user's files in `/dev/shm` when their last login session ends, so after an SSH logout JACK's socket is gone. Audio keeps running, but restarting crone, sclang or matron (e.g. SYSTEM > RESTART) then fails with "jack server is not running".
 - Sets up the Samba `dust` share and turns off `nmbd` (Samba's NetBIOS name service). It times out at boot and isn't needed, because the share is reached as `smb://norns.local` through mDNS.
 
 No `matronrc.lua` is needed: norns' default already matches the shield (keys + 3 encoders, screen built in).
