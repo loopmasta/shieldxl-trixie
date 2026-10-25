@@ -1,0 +1,62 @@
+/*
+Device Tree overlay for the CS4270 codec of the norns shield (210330) and the
+shieldXL. From monome/linux (5.10), for current Raspberry Pi kernels (6.x):
+the codec reset on GPIO 17 is only claimed by the codec driver (the old
+overlay also hogged it, which 6.x refuses), active high, because the driver
+releases the reset by setting the line to 1.
+The card is called snd-rpi-monome (ALSA id sndrpimonome), as on a norns.
+*/
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target = <&sound>;
+		__overlay__ {
+			compatible = "simple-audio-card";
+			status = "okay";
+			simple-audio-card,name = "snd-rpi-monome";
+			simple-audio-card,dai-link {
+				format = "i2s";
+				bitclock-master = <&codec_dai>;
+				frame-master = <&codec_dai>;
+				cpu {
+					sound-dai = <&i2s_clk_consumer>;
+					dai-tdm-slot-num = <2>;
+					dai-tdm-slot-width = <32>;
+				};
+				codec_dai: codec {
+					sound-dai = <&cs4270>;
+					system-clock-frequency = <12288000>;
+				};
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&i2s_clk_consumer>;
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@2 {
+		target = <&i2c1>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			cs4270: cs4270@48 {
+				#sound-dai-cells = <0>;
+				compatible = "cirrus,cs4270";
+				reg = <0x48>;
+				reset-gpios = <&gpio 17 0>;
+				status = "okay";
+			};
+		};
+	};
+};
