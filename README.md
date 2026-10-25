@@ -168,7 +168,8 @@ Then the script:
 - Runs `sclang` once. The first run only registers norns' class paths, and they apply from the next run on. Without this, the first boot shows **SUPERCOLLIDER FAIL**.
 - Creates `~/dust`, downloads the official 2.9.4 update package and takes **maiden's web app** and `version.txt` from it. Downloads the common audio files.
 - Builds the **maiden server** (monome/maiden v1.1.6, the version in that package) for arm64 with `go build`. The package's server is a 32-bit ARM binary; it would run, but this way everything is native.
-- **Unmutes the CS4270 output** (`amixer -c sndrpimonome set Master 100% on`, then `alsactl store`). The codec's `Master Playback Switch` starts off: the level meters move, but nothing is audible. The official norns update does the same.
+- **Sets the CS4270 output to full volume** (`amixer -c sndrpimonome set Master 100% on`, then `alsactl store`), as the official norns update does.
+- **Unmutes the CS4270 output each time JACK starts** (`ExecStartPost=… amixer … set Master on` in `norns-jack.service`). The codec's `Master Playback Switch` is off whenever no audio stream is open, because the driver mutes the DAC then. At shutdown JACK is already stopped, so ALSA saves "off" and restores it at the next boot: the level meters move, but nothing is audible. Storing "on" once isn't enough.
 - Installs the systemd units from monome/norns-image, adapted:
   - JACK uses `hw:sndrpimonome`.
   - sclang runs with `QT_QPA_PLATFORM=offscreen` (Debian's sclang is built with Qt).
@@ -199,7 +200,7 @@ Installs **awake** (`tehn/awake`, the script a new norns starts with) and **firs
 | Symptom | Check |
 |---|---|
 | no `sndrpimonome` card | `sudo dmesg \| grep -i cs4270` (should say "found device at i2c address 48"); `sudo dkms status`; `i2cdetect -y 1` should show `48` (or `UU`) |
-| meters move, but no sound | output muted: `amixer -c sndrpimonome contents` shows `Master Playback Switch` off → `amixer -c sndrpimonome set Master 100% on && sudo alsactl store` |
+| meters move, but no sound | output muted: `amixer -c sndrpimonome contents` shows `Master Playback Switch` off → `amixer -c sndrpimonome set Master 100% on`. If it is off again after every reboot, `norns-jack.service` is missing the `ExecStartPost=… amixer … set Master on` line: run `03-norns.sh` again |
 | norns-jack fails | `journalctl -u norns-jack` — `jack_wait` missing → `sudo apt install jack-example-tools` |
 | SUPERCOLLIDER FAIL | `journalctl -u norns-sclang`; restart the services once: `sudo systemctl restart norns-jack norns-crone norns-sclang norns-matron` (restarting `norns.target` alone doesn't restart them) |
 | crone / sclang / matron fail to restart with "jack server is not running", but `norns-jack` is active | JACK's socket in `/dev/shm` was deleted by logind after an SSH logout. Check `/etc/systemd/logind.conf.d/10-norns.conf` contains `RemoveIPC=no`, then `sudo systemctl restart norns-jack norns-crone norns-sclang norns-matron` |

@@ -78,8 +78,11 @@ if ! grep -q "\[$CARD" /proc/asound/cards; then
   cat /proc/asound/cards
   exit 1
 fi
-# the CS4270 output starts muted; unmute it as the norns update does, and keep
-# it (alsa-restore loads the stored state at boot)
+# output volume to full, as the norns update does (alsa-restore loads the
+# stored volume at boot). The mute switch can't be stored the same way: the
+# CS4270 driver mutes the DAC whenever no stream is open, so at shutdown
+# (JACK already stopped) "off" is saved and restored at the next boot.
+# norns-jack switches the output on once JACK runs (ExecStartPost below).
 amixer -c $CARD set Master 100% on > /dev/null
 sudo alsactl store
 
@@ -103,6 +106,7 @@ LimitRTPRIO=95
 LimitMEMLOCK=infinity
 ExecStart=/usr/bin/jackd -R -P 95 -d alsa -d hw:$CARD -r 48000 -n 3 -p 128 -S -s
 ExecStartPost=/usr/bin/jack_wait -w -t 10
+ExecStartPost=/usr/bin/amixer -q -c $CARD set Master on
 TimeoutStopSec=1
 
 [Install]
