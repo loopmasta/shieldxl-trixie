@@ -107,7 +107,7 @@ sudo reboot
 
 After this reboot the norns menu should appear on the screen, and maiden is available at `http://norns.local`.
 
-## 4. Check that everything runs, add the default scripts
+## 4. Check that everything runs
 
 ```
 systemctl is-active norns-jack norns-crone norns-sclang norns-matron norns-maiden
@@ -115,24 +115,26 @@ journalctl -u norns-sclang -n 30 --no-pager     # "SuperCollider 3 server ready"
 jack_lsp | grep SuperCollider
 ```
 
-Then install the default scripts (awake, firstlight):
-
-```
-~/shieldxl-trixie/04-scripts.sh
-```
-
-They show up under SELECT right away, no reboot needed. Install more scripts with `git clone` into `~/dust/code/`, through maiden, or copy them to the `dust` Samba share (`smb://norns.local/dust`, user `we`, password `sleep`).
-
 ## 5. Optional: hardware MIDI on the TRS jacks (untested)
 
 > **Untested:** the setup installs and runs, and MIDI out leaves the Pi's UART, but receiving MIDI hasn't been confirmed with a working MIDI device yet.
 
 ```
-~/shieldxl-trixie/05-midi.sh
+~/shieldxl-trixie/04-midi.sh
 sudo reboot
 ```
 
 The jacks then appear in norns as the `virtual` device under SYSTEM > DEVICES > MIDI; assign it to a port there.
+
+## 6. Add the default scripts
+
+Install the default scripts (awake, firstlight):
+
+```
+~/shieldxl-trixie/05-scripts.sh
+```
+
+They show up under SELECT right away, no reboot needed. Install more scripts with `git clone` into `~/dust/code/`, through maiden, or copy them to the `dust` Samba share (`smb://norns.local/dust`, user `we`, password `sleep`).
 
 ---
 
@@ -192,11 +194,7 @@ Then the script:
 
 No `matronrc.lua` is needed: norns' default already matches the shield (keys + 3 encoders, screen built in).
 
-### Step 4: default scripts (`04-scripts.sh`)
-
-Installs **awake** (`tehn/awake`, the script a new norns starts with) and **firstlight** (from monome's base collection in maiden). Each script is cloned with git into `~/dust/code`, as maiden does, so maiden can update it later. Scripts that are already there are skipped.
-
-### Step 5: hardware MIDI (`05-midi.sh`, untested)
+### Step 4: hardware MIDI (`04-midi.sh`, untested)
 
 Follows okyeron's `install-midi.sh` from the shieldXL repo, adapted for trixie on arm64. The TRS jacks are wired to UART0 (GPIO 14/15).
 
@@ -205,6 +203,10 @@ Follows okyeron's `install-midi.sh` from the shieldXL repo, adapted for trixie o
 - **ttymidi** (okyeron's fork, pinned to one commit) is built into `/usr/local/bin`. It runs as `ttymidi.service` and turns `/dev/ttyAMA0` into the ALSA MIDI client `shieldXL`.
 - **`norns-midi-connect.service`** connects `shieldXL` both ways to matron's virtual MIDI port, and reconnects whenever matron or ttymidi restarts (the ALSA client numbers change). matron opens its virtual device twice and only uses the second one, so it connects to matron's highest-numbered client. This replaces okyeron's amidiminder, which has no arm64 package.
 - okyeron's `99-com.rules` isn't copied: it would override the newer one trixie ships in `/usr/lib/udev/rules.d`, and ttymidi opens `/dev/ttyAMA0` directly.
+
+### Step 5: default scripts (`05-scripts.sh`)
+
+Installs **awake** (`tehn/awake`, the script a new norns starts with) and **firstlight** (from monome's base collection in maiden). Each script is cloned with git into `~/dust/code`, as maiden does, so maiden can update it later. Scripts that are already there are skipped.
 
 ---
 

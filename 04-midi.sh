@@ -1,6 +1,6 @@
 #!/bin/bash
 # shieldXL (norns shield 210330, CS4270) on Raspberry Pi OS trixie (arm64),
-# step 5 (optional): hardware MIDI on the shieldXL's TRS jacks, after
+# step 4 (optional): hardware MIDI on the shieldXL's TRS jacks, after
 # okyeron's install-midi.sh. The jacks are wired to UART0 (GPIO 14/15);
 # ttymidi turns the serial port into an ALSA MIDI client ("shieldXL") and a
 # small service connects it to matron's virtual MIDI port, which shows up as
@@ -89,4 +89,4 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable ttymidi norns-midi-connect
 
-echo "step 5 done, reboot now"
+echo "step 4 done, reboot now"

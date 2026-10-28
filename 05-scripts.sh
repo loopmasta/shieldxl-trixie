@@ -1,5 +1,5 @@
 #!/bin/bash
-# shieldXL (norns shield 210330) on Raspberry Pi OS trixie (arm64), step 4:
+# shieldXL (norns shield 210330) on Raspberry Pi OS trixie (arm64), step 5:
 # the default scripts: awake (the script a new norns starts with) and
 # firstlight. Cloned with git into ~/dust/code, as maiden does, so they can be
 # updated from maiden. Run once norns is up (after the reboot that follows
@@ -19,4 +19,4 @@ awake https://github.com/tehn/awake.git
 firstlight https://github.com/monome/firstlight.git
 LIST
 
-echo "step 4 done: SELECT on the norns lists the new scripts"
+echo "step 5 done: SELECT on the norns lists the new scripts"
