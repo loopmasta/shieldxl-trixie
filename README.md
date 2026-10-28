@@ -123,6 +123,17 @@ Then install the default scripts (awake, firstlight):
 
 They show up under SELECT right away, no reboot needed. Install more scripts with `git clone` into `~/dust/code/`, through maiden, or copy them to the `dust` Samba share (`smb://norns.local/dust`, user `we`, password `sleep`).
 
+## 5. Optional: hardware MIDI on the TRS jacks (untested)
+
+> **Untested:** the setup installs and runs, and MIDI out leaves the Pi's UART, but receiving MIDI hasn't been confirmed with a working MIDI device yet.
+
+```
+~/shieldxl-trixie/05-midi.sh
+sudo reboot
+```
+
+The jacks then appear in norns as the `virtual` device under SYSTEM > DEVICES > MIDI; assign it to a port there.
+
 ---
 
 ## What each step does, and why
@@ -185,6 +196,16 @@ No `matronrc.lua` is needed: norns' default already matches the shield (keys + 3
 
 Installs **awake** (`tehn/awake`, the script a new norns starts with) and **firstlight** (from monome's base collection in maiden). Each script is cloned with git into `~/dust/code`, as maiden does, so maiden can update it later. Scripts that are already there are skipped.
 
+### Step 5: hardware MIDI (`05-midi.sh`, untested)
+
+Follows okyeron's `install-midi.sh` from the shieldXL repo, adapted for trixie on arm64. The TRS jacks are wired to UART0 (GPIO 14/15).
+
+- **`config.txt`:** `enable_uart=1`, `dtoverlay=miniuart-bt` (Bluetooth moves to the mini UART, so UART0 is free for GPIO 14/15), `dtoverlay=uart0` and `dtoverlay=midi-uart0` (a requested 38400 baud actually runs at MIDI's 31250).
+- **`cmdline.txt`:** removes `console=serial0,115200`, so no serial console sits on the MIDI port.
+- **ttymidi** (okyeron's fork, pinned to one commit) is built into `/usr/local/bin`. It runs as `ttymidi.service` and turns `/dev/ttyAMA0` into the ALSA MIDI client `shieldXL`.
+- **`norns-midi-connect.service`** connects `shieldXL` both ways to matron's virtual MIDI port, and reconnects whenever matron or ttymidi restarts (the ALSA client numbers change). matron opens its virtual device twice and only uses the second one, so it connects to matron's highest-numbered client. This replaces okyeron's amidiminder, which has no arm64 package.
+- okyeron's `99-com.rules` isn't copied: it would override the newer one trixie ships in `/usr/lib/udev/rules.d`, and ttymidi opens `/dev/ttyAMA0` directly.
+
 ---
 
 ## Important notes
@@ -192,7 +213,6 @@ Installs **awake** (`tehn/awake`, the script a new norns starts with) and **firs
 - **Never use SYSTEM > UPDATE in the norns menu.** It installs the official 32-bit build and replaces your patched arm64 binaries. To update norns, change `NORNS_TAG` (and `UPDATE`, the matching update package name from the release page, and `MAIDEN_TAG`, the maiden version it contains) in `03-norns.sh`, delete `~/norns` and `~/src/maiden` and run `03-norns.sh` again.
 - **Kernel updates** (`apt full-upgrade`) are fine: DKMS rebuilds the codec driver automatically. If sound is missing after an update, check `sudo dkms status`.
 - **Four encoders** (as on some fates boards) aren't supported by stock norns. The Lua code only knows E1–E3.
-- **Hardware MIDI on the shieldXL** (`install-midi.sh` from the shieldXL repo) isn't covered here. That script installs a 32-bit `amidiminder` package and needs adapting for arm64.
 - **Other shields:** the norns shield 211028+ uses a different codec, the CS4271 (overlay `monome-snd-4271` in monome's kernel fork). The Pi kernel does include a CS4271 driver, but that overlay isn't covered here.
 - **fates boards** use different pins (OLED D/C 17, reset 4, encoder 1 on 5/6) and a WM8731 codec (overlay `proto-codec` on current kernels). The same approach works, but with a pin patch in `ssd1322.h` and different overlays.
 
@@ -207,6 +227,7 @@ Installs **awake** (`tehn/awake`, the script a new norns starts with) and **firs
 | crone / sclang / matron fail to restart with "jack server is not running", but `norns-jack` is active | JACK's socket in `/dev/shm` was deleted by logind after an SSH logout. Check `/etc/systemd/logind.conf.d/10-norns.conf` contains `RemoveIPC=no`, then `sudo systemctl restart norns-jack norns-crone norns-sclang norns-matron` |
 | black screen | `ls /dev/spidev0.0`; no screen overlay in `config.txt`; `spidev.bufsiz=8192` in `cmdline.txt`; `pinctrl get 5,6` should show outputs while matron runs |
 | `setlocale: LC_ALL: cannot change locale (en_US.UTF-8)` on every SSH login | harmless: your computer's SSH client sends its locale and the Pi doesn't have it. Generate it: `sudo sed -i 's/^# *en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen && sudo locale-gen` |
+| no MIDI from the TRS jacks | `systemctl is-active ttymidi norns-midi-connect`; `aconnect -l` should show `shieldXL` connected to a `Client-…` port; `aseqdump -p shieldXL:0` shows incoming notes; `sudo cat /proc/tty/driver/ttyAMA` counts the raw bytes (`rx` stays 0 if no signal reaches GPIO 15: check the cable, jack and TRS type A/B) |
 | keys / encoders dead | `ls /dev/input/by-path/` must list `platform-keys-event` and `platform-soc:knob1-event` … `knob3-event`; `sudo evtest` to see events |
 
 ---
