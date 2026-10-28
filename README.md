@@ -176,6 +176,8 @@ Clones **monome/norns v2.9.4** with its submodules and applies these patches. Ea
 | GCC 14 no longer includes `<string>` through other headers | added `#include <string>` to `crone/src/BufDiskWorker.h` |
 | cairo 1.18 places text at sub-pixel positions (buster's cairo 1.16 rounded them to whole pixels), so text on a half pixel blurs across two pixel columns, e.g. `screen.text_center` with an odd text width, such as the separators in the PARAMS menu | `matron/src/hardware/screen.c` rounds the current point to whole pixels before each `cairo_show_text` |
 
+**New feature, not in stock norns:** the SELECT preview shows an image. A script can ship a 128 × 64 `preview.png` next to its `.lua` file; `lua/core/menu/preview.lua` draws it as a background, with the script's header text on top as usual (E2 still scrolls the text). Scripts without a `preview.png` look exactly as before. On a stock norns the file is simply ignored, so the header text should still make sense on its own. The image is drawn as is: use black and white (or the 16 gray levels of the screen) for the look of the norns menu, and keep the top row free if the header's first line should stay readable.
+
 Then the script:
 
 - Builds norns (`./waf configure --release && ./waf build`) and installs norns' SuperCollider class config.

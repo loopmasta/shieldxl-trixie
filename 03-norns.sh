@@ -47,6 +47,15 @@ grep -q "text_move_to_pixel" matron/src/hardware/screen.c || sed -i \
   -e 's|^    cairo_show_text(cr, s);$|    text_move_to_pixel();\n&|' \
   matron/src/hardware/screen.c
 
+# --- NEW FEATURE, not in stock norns: SELECT preview image
+# a script can ship a 128x64 preview.png next to its .lua file; the SELECT
+# preview draws it as a background behind the header text. Scripts without
+# one look as before; stock norns ignores the file
+grep -q "preview.png" lua/core/menu/preview.lua || sed -i \
+  -e 's|^  if m.posmax < 0 then m.posmax = 0 end$|&\n  -- a 128x64 preview.png next to the script is drawn behind the text\n  m.png = _menu.previewfile:match("(.*/)") .. "preview.png"\n  if not util.file_exists(m.png) then m.png = nil end|' \
+  -e 's|^  if m.wait == 0 then$|&\n    if m.png then screen.display_png(m.png, 0, 0) end|' \
+  lua/core/menu/preview.lua
+
 ./waf configure --release
 ./waf build -j4
 
