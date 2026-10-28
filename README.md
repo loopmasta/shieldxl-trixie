@@ -161,6 +161,7 @@ Clones **monome/norns v2.9.4** with its submodules and applies these patches. Ea
 | `device_hid.c` needs `glib.h`, which older systems pulled in through other packages | added `glib-2.0` as a pkg-config dependency for matron |
 | liblo 0.32 defines `lo_message` as a struct pointer, which conflicts with norns' `typedef void *lo_message` | replaced the typedef with `#include <lo/lo.h>` |
 | GCC 14 no longer includes `<string>` through other headers | added `#include <string>` to `crone/src/BufDiskWorker.h` |
+| cairo 1.18 places text at sub-pixel positions (buster's cairo 1.16 rounded them to whole pixels), so text on a half pixel blurs across two pixel columns, e.g. `screen.text_center` with an odd text width, such as the separators in the PARAMS menu | `matron/src/hardware/screen.c` rounds the current point to whole pixels before each `cairo_show_text` |
 
 Then the script:
 

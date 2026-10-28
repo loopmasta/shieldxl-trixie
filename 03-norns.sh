@@ -39,6 +39,13 @@ grep -q "'GLIB'" matron/wscript || sed -i "s/^        'JACK',\$/        'JACK',\
 sed -i 's|^typedef void \*lo_message;$|#include <lo/lo.h>|' matron/src/event_types.h
 # GCC 14 no longer includes <string> through other headers
 grep -q "#include <string>" crone/src/BufDiskWorker.h || sed -i '0,/^#include/s//#include <string>\n#include/' crone/src/BufDiskWorker.h
+# cairo 1.18 places text at sub-pixel positions (buster's 1.16 rounded them to
+# whole pixels), so text on a half pixel, e.g. text_center with an odd width,
+# blurs across two pixel columns: round the position before drawing text
+grep -q "text_move_to_pixel" matron/src/hardware/screen.c || sed -i \
+  -e 's|^//-- screen commands$|&\n\n// round the text position to whole pixels: newer cairo would blur the font\nstatic void text_move_to_pixel(void) {\n    double x, y;\n    cairo_get_current_point(cr, \&x, \&y);\n    cairo_move_to(cr, round(x), round(y));\n}|' \
+  -e 's|^    cairo_show_text(cr, s);$|    text_move_to_pixel();\n&|' \
+  matron/src/hardware/screen.c
 
 ./waf configure --release
 ./waf build -j4
