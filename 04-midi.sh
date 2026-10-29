@@ -6,6 +6,7 @@
 # small service connects it to matron's virtual MIDI port, which shows up as
 # "virtual" in SYSTEM > DEVICES > MIDI. Reboot afterwards.
 set -e
+HERE=$(cd "$(dirname "$0")" && pwd)
 BOOT=/boot/firmware
 TTYMIDI_COMMIT=06f18e0f4a8f09bb13130fba2295c2a3c534c03c
 
@@ -26,10 +27,16 @@ fi
 # no serial console on the MIDI port
 sudo sed -i 's/console=serial0,[0-9]* //' $BOOT/cmdline.txt
 
-# --- ttymidi (okyeron's fork), a single C file
+# --- ttymidi (okyeron's fork), a single C file. Its serial parser can't handle
+# running status (note bytes without a repeated status byte) or real-time bytes
+# in the middle of a message, and passes active sensing on as unknown events;
+# devices like the EP-133 send all of these, so the notes got lost. The patch
+# replaces the parser (running status, real-time bytes passed on at once,
+# active sensing ignored, correct lengths incl. pitch bend, sysex up to F7)
 T=$(mktemp -d)
 git clone -q https://github.com/okyeron/ttymidi $T/ttymidi
 git -C $T/ttymidi checkout -q $TTYMIDI_COMMIT
+patch -s -d $T/ttymidi -p1 < $HERE/patches/ttymidi-parser.patch
 gcc -O2 $T/ttymidi/src/ttymidi.c -o $T/ttymidi/ttymidi -lasound -lpthread
 sudo install -m 755 $T/ttymidi/ttymidi /usr/local/bin/ttymidi
 rm -rf $T

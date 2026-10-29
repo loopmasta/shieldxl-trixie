@@ -115,9 +115,9 @@ journalctl -u norns-sclang -n 30 --no-pager     # "SuperCollider 3 server ready"
 jack_lsp | grep SuperCollider
 ```
 
-## 5. Optional: hardware MIDI on the TRS jacks (untested)
+## 5. Optional: hardware MIDI on the TRS jacks
 
-> **Untested:** the setup installs and runs, and MIDI out leaves the Pi's UART, but receiving MIDI hasn't been confirmed with a working MIDI device yet.
+> Tested with a Teenage Engineering EP-133 (MIDI in and out) and a Zoom LiveTrak L6 (MIDI in). The MIDI OUT jack has a Type A/B switch on the bottom front edge of the shieldXL's main board; set it to your device's type. The shieldXL's red LED lights when MIDI comes in, the blue one when MIDI goes out.
 
 ```
 ~/shieldxl-trixie/04-midi.sh
@@ -196,13 +196,14 @@ Then the script:
 
 No `matronrc.lua` is needed: norns' default already matches the shield (keys + 3 encoders, screen built in).
 
-### Step 4: hardware MIDI (`04-midi.sh`, untested)
+### Step 4: hardware MIDI (`04-midi.sh`)
 
 Follows okyeron's `install-midi.sh` from the shieldXL repo, adapted for trixie on arm64. The TRS jacks are wired to UART0 (GPIO 14/15).
 
 - **`config.txt`:** `enable_uart=1`, `dtoverlay=miniuart-bt` (Bluetooth moves to the mini UART, so UART0 is free for GPIO 14/15), `dtoverlay=uart0` and `dtoverlay=midi-uart0` (a requested 38400 baud actually runs at MIDI's 31250).
 - **`cmdline.txt`:** removes `console=serial0,115200`, so no serial console sits on the MIDI port.
 - **ttymidi** (okyeron's fork, pinned to one commit) is built into `/usr/local/bin`. It runs as `ttymidi.service` and turns `/dev/ttyAMA0` into the ALSA MIDI client `shieldXL`.
+- **ttymidi parser patch** ([`patches/ttymidi-parser.patch`](patches/ttymidi-parser.patch)): ttymidi's serial parser can't handle running status (notes sent without repeating the status byte) or real-time bytes in the middle of a message, and passes active sensing on as unknown events. Devices like the EP-133 send all of these, so their notes got lost (`aseqdump` showed only "Event type 0"). The patch replaces the parser: running status, real-time bytes (clock, start/stop) passed on at once, active sensing ignored, correct message lengths (pitch bend has two data bytes, not one), sysex collected up to `F7`.
 - **`norns-midi-connect.service`** connects `shieldXL` both ways to matron's virtual MIDI port, and reconnects whenever matron or ttymidi restarts (the ALSA client numbers change). matron opens its virtual device twice and only uses the second one, so it connects to matron's highest-numbered client. This replaces okyeron's amidiminder, which has no arm64 package.
 - okyeron's `99-com.rules` isn't copied: it would override the newer one trixie ships in `/usr/lib/udev/rules.d`, and ttymidi opens `/dev/ttyAMA0` directly.
 
@@ -231,7 +232,9 @@ Installs **awake** (`tehn/awake`, the script a new norns starts with) and **firs
 | crone / sclang / matron fail to restart with "jack server is not running", but `norns-jack` is active | JACK's socket in `/dev/shm` was deleted by logind after an SSH logout. Check `/etc/systemd/logind.conf.d/10-norns.conf` contains `RemoveIPC=no`, then `sudo systemctl restart norns-jack norns-crone norns-sclang norns-matron` |
 | black screen | `ls /dev/spidev0.0`; no screen overlay in `config.txt`; `spidev.bufsiz=8192` in `cmdline.txt`; `pinctrl get 5,6` should show outputs while matron runs |
 | `setlocale: LC_ALL: cannot change locale (en_US.UTF-8)` on every SSH login | harmless: your computer's SSH client sends its locale and the Pi doesn't have it. Generate it: `sudo sed -i 's/^# *en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen && sudo locale-gen` |
-| no MIDI from the TRS jacks | `systemctl is-active ttymidi norns-midi-connect`; `aconnect -l` should show `shieldXL` connected to a `Client-…` port; `aseqdump -p shieldXL:0` shows incoming notes; `sudo cat /proc/tty/driver/ttyAMA` counts the raw bytes (`rx` stays 0 if no signal reaches GPIO 15: check the cable, jack and TRS type A/B) |
+| no MIDI from the TRS jacks | `systemctl is-active ttymidi norns-midi-connect`; `aconnect -l` should show `shieldXL` connected to a `Client-…` port; `aseqdump -p shieldXL:0` shows incoming notes; `sudo cat /proc/tty/driver/ttyAMA` counts the raw bytes (`rx` stays 0 if no signal reaches GPIO 15: check the cable, the jack (MIDI IN, not OUT) and the TRS type A/B; a few bytes right when plugging the cable in are just contact noise). The shieldXL's red LED lights when MIDI comes in. In norns, assign the `virtual` device to a port under SYSTEM > DEVICES > MIDI |
+| `aseqdump` shows only "Event type 0" | an unpatched ttymidi (running status / active sensing): run `04-midi.sh` again, it builds ttymidi with the parser patch |
+| a device doesn't receive MIDI out | the blue LED should flicker while norns sends. Check the device's receive channel first (e.g. the EP-133: SHIFT + ERASE, code 110 = receive on all channels). Then the MIDI OUT Type A/B switch on the shieldXL's main board (bottom front edge); set it fully to one side, a switch between positions connects nothing |
 | keys / encoders dead | `ls /dev/input/by-path/` must list `platform-keys-event` and `platform-soc:knob1-event` … `knob3-event`; `sudo evtest` to see events |
 
 ---
